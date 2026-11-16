@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CleanPic - AI Metadata Stripper (Batch Mode)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .dropzone { border: 2px dashed rgba(255, 255, 255, 0.15); transition: all 0.3s ease; }
+        .dropzone.dragover { border-color: #38bdf8; background: rgba(56, 189, 248, 0.05); }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-between p-6">
+
+    <!-- Header -->
+    <header class="w-full max-w-4xl text-center py-6">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 text-sky-400 text-xs font-semibold mb-3 border border-sky-500/20">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            100% Private & Local &bull; Batch Processing
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-bold tracking-tight text-white">CleanPic Metadata Stripper</h1>
+        <p class="text-slate-400 text-sm mt-2">Remove EXIF, XMP, and AI generator tags from multiple images instantly.</p>
+    </header>
+
+    <!-- Main Container -->
+    <main class="w-full max-w-4xl glass rounded-2xl p-6 sm:p-8 shadow-2xl mb-8 space-y-6">
+        
+        <!-- Dropzone -->
+        <div id="dropzone" class="dropzone rounded-xl p-8 text-center cursor-pointer flex flex-col items-center justify-center gap-4">
+            <div class="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-sky-400 shadow-inner">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+                <p class=\"text-base font-medium text-slate-200\">Drag & drop multiple images here, or <span class=\"text-sky-400 underline underline-offset-4\">browse files</span></p>
+                <p class=\"text-xs text-slate-500 mt-1\">Supports PNG, JPEG, WebP (Select as many as you want)</p>
+            </div>
+            <input type="file" id="fileInput" class="hidden" accept="image/png, image/jpeg, image/webp" multiple>
+        </div>
+
+        <!-- Toolbar & Batch Actions (Hidden initially) -->
+        <div id="batchToolbar" class="hidden flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div class="flex items-center gap-3">
+                <span id="imageCounter" class="text-sm font-semibold text-slate-300">0 images loaded</span>
+                <select id="formatSelect" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-sky-500">
+                    <option value="auto">Keep Original Format</option>
+                    <option value="image/jpeg">Convert to JPEG</option>
+                    <option value="image/png">Convert to PNG</option>
+                    <option value="image/webp">Convert to WebP</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="addMoreBtn" class="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:bg-slate-800 text-xs font-medium transition-all">Add More</button>
+                <button id="clearAllBtn" class="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 text-xs font-medium transition-all">Clear All</button>
+                <button id="downloadAllBtn" class="px-4 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs shadow-lg shadow-sky-500/20 transition-all flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                    Download All
+                </button>
+            </div>
+        </div>
+
+        <p class="text-xs text-slate-400">Download All saves each cleaned image separately (no ZIP). If your browser asks, allow multiple downloads. You can also use each image's Download Clean button.</p>
+
+        <!-- Image List / Grid -->
+        <div id="imageGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-1">
+            <!-- Dynamically populated items -->
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-xs text-slate-500 text-center">
+        CleanPic Local Tool &bull; Powered by HTML5 Canvas &bull; Zero server uploads
+    </footer>
+
+    <!-- Hidden Canvas for processing -->
+    <canvas id="hiddenCanvas" class="hidden"></canvas>
+
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const batchToolbar = document.getElementById('batchToolbar');
+        const imageGrid = document.getElementById('imageGrid');
+        const imageCounter = document.getElementById('imageCounter');
+        const formatSelect = document.getElementById('formatSelect');
+        const addMoreBtn = document.getElementById('addMoreBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
+        const hiddenCanvas = document.getElementById('hiddenCanvas');
+
+        let imageItems = []; // Array of { id, file, originalUrl, cleanedBlob, cleanedUrl, status, name, size, cleanedSize }
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        addMoreBtn.addEventListener('click', () => fileInput.click());
+        
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFiles(e.target.files);
+            fileInput.value = ''; // reset input so same files can be chosen again if needed
+        });
+
+        formatSelect.addEventListener('change', reprocessAllImages);
+
+        clearAllBtn.addEventListener('click', () => {
+            imageItems.forEach(item => {
+                if (item.originalUrl) URL.revokeObjectURL(item.originalUrl);
+                if (item.cleanedUrl) URL.revokeObjectURL(item.cleanedUrl);
+            });
+            imageItems = [];
+            renderUI();
+        });
+
+        function handleFiles(fileList) {
+            let newItemsAdded = false;
+            Array.from(fileList).forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                
+                const item = {
+                    id: Math.random().toString(36.2),
+                    file: file,
+                    name: file.name,
+                    size: file.size,
+                    originalUrl: URL.createObjectURL(file),
+                    cleanedBlob: null,
+                    cleanedUrl: null,
+                    cleanedSize: 0,
+                    status: 'processing'
+                };
+                imageItems.push(item);
+                newItemsAdded = true;
+                processItem(item);
+            });
+
+            if (newItemsAdded) {
+                renderUI();
+            }
+        }
+
+        function processItem(item) {
+            const img = new Image();
+            img.onload = () => {
+                hiddenCanvas.width = img.naturalWidth;
+                hiddenCanvas.height = img.naturalHeight;
+                const ctx = hiddenCanvas.getContext('2d');
+                ctx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
+                ctx.drawImage(img, 0, 0);
+
+                let format = formatSelect.value;
+                if (format === 'auto') {
+                    format = item.file.type;
+                    if (!['image/jpeg', 'image/png', 'image/webp'].includes(format)) {
+                        format = 'image/jpeg';
+                    }
+                }
+
+                const quality = format === 'image/jpeg' ? 0.92 : undefined;
+
+                hiddenCanvas.toBlob((blob) => {
+                    item.cleanedBlob = blob;
+                    item.cleanedSize = blob.size;
+                    if (item.cleanedUrl) URL.revokeObjectURL(item.cleanedUrl);
+                    item.cleanedUrl = URL.createObjectURL(blob);
+                    item.status = 'ready';
+                    updateItemElement(item);
+                }, format, quality);
+            };
+            img.onerror = () => {
+                item.status = 'error';
+                updateItemElement(item);
+            };
+            img.src = item.originalUrl;
+        }
+
+        function reprocessAllImages() {
+            imageItems.forEach(item => {
+                item.status = 'processing';
+                updateItemElement(item);
+                processItem(item);
+            });
+        }
+
+        function renderUI() {
+            if (imageItems.length === 0) {
+                dropzone.classList.remove('hidden');
+                batchToolbar.classList.add('hidden');
+                imageGrid.innerHTML = '';
+                return;
+            }
+
+            dropzone.classList.remove('hidden'); // allow dropping more anytime
+            batchToolbar.classList.remove('hidden');
+            imageCounter.textContent = `${imageItems.length} image${imageItems.length > 1 ? 's' : ''} loaded`;
+
+            imageGrid.innerHTML = imageItems.map(item => `
+                <div id="card-${item.id}" class="glass rounded-xl p-4 flex flex-col gap-3 border border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <img src="${item.originalUrl}" class="w-16 h-16 rounded-lg object-cover bg-slate-900 border border-slate-800 shrink-0" alt="Thumbnail">
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-slate-200 truncate">${item.name}</p>
+                            <p class="text-xs text-slate-400">Original: ${(item.size / 1024).toFixed(1)} KB</p>
+                            <p id="status-${item.id}" class="text-xs ${item.status === 'ready' ? 'text-emerald-400 font-medium' : 'text-sky-400'} mt-0.5">
+                                ${item.status === 'processing' ? 'Processing & stripping metadata...' : `Cleaned: ${(item.cleanedSize / 1024).toFixed(1)} KB &bull; EXIF Wiped`}
+                            </p>
+                        </div>
+                        <button onclick="removeItem('${item.id}')" class="text-slate-500 hover:text-red-400 p-1.5 rounded-lg hover:bg-slate-900 transition-all" title="Remove">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                        <span class="text-[11px] text-slate-500">Metadata stripped via Canvas</span>
+                        <a id="dl-${item.id}" href="${item.cleanedUrl || '#'}" download="${getCleanFileName(item.name)}" 
+                           class="px-3 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500 hover:text-slate-950 text-sky-400 text-xs font-semibold border border-sky-500/30 transition-all ${item.status !== 'ready' ? 'opacity-50 pointer-events-none' : ''}">
+                            Download Clean
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateItemElement(item) {
+            const card = document.getElementById(`card-${item.id}`);
+            if (!card) {
+                renderUI();
+                return;
+            }
+            const statusEl = document.getElementById(`status-${item.id}`);
+            const dlEl = document.getElementById(`dl-${item.id}`);
+
+            if (statusEl) {
+                statusEl.className = `text-xs ${item.status === 'ready' ? 'text-emerald-400 font-medium' : 'text-sky-400'} mt-0.5`;
+                statusEl.textContent = item.status === 'processing' ? 'Processing & stripping metadata...' : `Cleaned: ${(item.cleanedSize / 1024).toFixed(1)} KB &bull; EXIF Wiped`;
+            }
+            if (dlEl) {
+                dlEl.href = item.cleanedUrl || '#';
+                dlEl.setAttribute('download', getCleanFileName(item.name));
+                if (item.status === 'ready') {
+                    dlEl.classList.remove('opacity-50', 'pointer-events-none');
+                } else {
+                    dlEl.classList.add('opacity-50', 'pointer-events-none');
+                }
+            }
+        }
+
+        function removeItem(id) {
+            const idx = imageItems.findIndex(i => i.id === id);
+            if (idx !== -1) {
+                const item = imageItems[idx];
+                if (item.originalUrl) URL.revokeObjectURL(item.originalUrl);
+                if (item.cleanedUrl) URL.revokeObjectURL(item.cleanedUrl);
+                imageItems.splice(idx, 1);
+                renderUI();
+            }
+        }
+
+        function getCleanFileName(originalName) {
+            const lastDot = originalName.lastIndexOf('.');
+            const baseName = lastDot !== -1 ? originalName.substring(0, lastDot) : originalName;
+            
+            let ext = 'jpg';
+            const format = formatSelect.value;
+            if (format === 'image/png') ext = 'png';
+            else if (format === 'image/webp') ext = 'webp';
+            else if (format === 'auto') {
+                if (originalName.endsWith('.png')) ext = 'png';
+                else if (originalName.endsWith('.webp')) ext = 'webp';
+                else ext = 'jpg';
+            }
+
+            return `${baseName}_clean.${ext}`;
+        }
+
+        downloadAllBtn.addEventListener('click', async () => {
+            if (downloadAllBtn.disabled) return;
+            const readyItems = imageItems
+                .filter(i => i.status === 'ready' && i.cleanedBlob && i.cleanedUrl)
+                .map(item => ({ url: item.cleanedUrl, name: getCleanFileName(item.name) }));
+            if (readyItems.length === 0) {
+                alert('No processed images ready yet.');
+                return;
+            }
+
+            const originalLabel = downloadAllBtn.innerHTML;
+            downloadAllBtn.disabled = true;
+            try {
+                for (const [index, item] of readyItems.entries()) {
+                    downloadAllBtn.textContent = `Downloading ${index + 1} / ${readyItems.length}...`;
+                    const a = document.createElement('a');
+                    a.href = item.url;
+                    a.download = item.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    // Space out requests; the browser may still require permission.
+                    if (index < readyItems.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 350));
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Could not start all downloads. Try the individual Download Clean buttons.');
+            } finally {
+                downloadAllBtn.innerHTML = originalLabel;
+                downloadAllBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
